@@ -44,6 +44,10 @@ template <class ReplyT> void Command<ReplyT>::wait() {
   waiting_done_ = {false};
 }
 
+template<typename ReplyT> bool Command<ReplyT>::processQueuedCommand_t() {
+  return rdx_->processQueuedCommand<ReplyT>(this);
+}
+
 template <class ReplyT> void Command<ReplyT>::processReply(redisReply *r) {
 
   last_error_.clear();
@@ -267,11 +271,6 @@ template <> void Command<set<string>>::parseReplyObject() {
     redisReply *r = *(reply_obj_->element + i);
     reply_val_.emplace(r->str, r->len);
   }
-}
-
-template<typename ReplyT>
-bool Command<ReplyT>::processQueuedCommand_t() {
-  return rdx_->processQueuedCommand<ReplyT>(this);
 }
 
 // Explicit template instantiation for available types, so that the generated
