@@ -304,10 +304,6 @@ private:
   // Free all commands in the commands_to_free_ queue
   static void freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revents);
 
-  // Free the command with the given ID. Return true if the command had the templated
-  // type, and false if it was not in the command map of that type.
-  template <class ReplyT> bool freeQueuedCommand(long id);
-
   // Free all commands remaining in the command maps
   long freeAllCommands();
 

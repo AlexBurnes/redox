@@ -379,26 +379,6 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
   }
 }
 
-template <class ReplyT> bool Redox::freeQueuedCommand(long id) {
-  Command<ReplyT> *c = findCommand<ReplyT>(id);
-  if (c == nullptr)
-    return false;
-
-  c->freeReply();
-
-  // Stop the libev timer if this is a repeating command
-  if ((c->repeat_ != 0) || (c->after_ != 0)) {
-    lock_guard<mutex> lg(c->timer_guard_);
-    ev_timer_stop(c->rdx_->evloop_, &c->timer_);
-  }
-
-  deregisterCommand();
-//FIXME free
-  delete c;
-
-  return true;
-}
-
 long Redox::freeAllCommands() {
   lock_guard<mutex> lg(free_queue_guard_);
   lock_guard<mutex> lg2(queue_guard_);
