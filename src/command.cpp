@@ -96,15 +96,13 @@ template <class ReplyT> void Command<ReplyT>::free() {
   ev_async_send(rdx_->evloop_, &rdx_->watcher_free_);
 }
 
-template <class ReplyT> void Command<ReplyT>::freeReply_t(bool deregister) {
+template <class ReplyT> void Command<ReplyT>::freeReply_t() {
   freeReply();
   // Stop the libev timer if this is a repeating command
   if ((repeat_ != 0) || (after_ != 0)) {
     lock_guard<mutex> lg(timer_guard_);
     ev_timer_stop(rdx_->evloop_, &timer_);
   }
-
-  if (deregister) rdx_->deregisterCommand<ReplyT>(id_);
 
   return;
 }

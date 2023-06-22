@@ -47,7 +47,7 @@ class Command_t {
     public:
         Command_t() {}
         virtual ~Command_t() {}
-        virtual void freeReply_t(bool deregister) {};
+        virtual void freeReply_t() {};
         virtual bool processQueuedCommand_t() {return false;};
         Command_t(const Command_t &) = delete;
         Command_t &operator=(const Command_t &) = delete;
@@ -138,7 +138,7 @@ private:
   // If needed, free the redisReply
   void freeReply();
 
-  void freeReply_t(bool deregister) override final;
+  void freeReply_t() override final;
   bool processQueuedCommand_t() override final;
 
   // The last server reply

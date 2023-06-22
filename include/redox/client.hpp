@@ -31,7 +31,6 @@
 #include <string>
 #include <queue>
 #include <set>
-#include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
 
@@ -240,9 +239,7 @@ public:
   // FIXME make it private again
   // Invoked by Command objects when they are completed. Removes them
   // from the command map.
-  template <class ReplyT> void deregisterCommand(const long id) {
-    std::lock_guard<std::mutex> lg1(command_map_guard_);
-    getCommandMap().erase(id);
+  void deregisterCommand() {
     commands_deleted_ += 1;
   }
 
@@ -314,12 +311,6 @@ private:
   // Free all commands remaining in the command maps
   long freeAllCommands();
 
-  // Helper function for freeAllCommands to access a commands_reply_ map
-  long freeAllCommands_t();
-
-  // Helper function for freeAllCommands to access a specific command map
-  template <class ReplyT> long freeAllCommandsOfType();
-
   // Helper functions to get/set variables with synchronization.
   int getConnectState();
   void setConnectState(int connect_state);
@@ -366,32 +357,8 @@ private:
   std::mutex exit_lock_;
   std::condition_variable exit_waiter_;
 
-  // Maps of each Command, fetchable by the unique ID number
-  // In C++14, member variable templates will replace all of these types
-  // with a single templated declaration
-  // ---------
-  // template<class ReplyT>
-  // std::unordered_map<long, Command<ReplyT>*> commands_;
-  // ---------
-  std::unordered_map<long, Command_t *> commands_reply_;
-  /*std::unordered_map<long, Command<redisReply *> *> commands_redis_reply_;
-  std::unordered_map<long, Command<std::string> *> commands_string_;
-  std::unordered_map<long, Command<char *> *> commands_char_p_;
-  std::unordered_map<long, Command<int> *> commands_int_;
-  std::unordered_map<long, Command<long long int> *> commands_long_long_int_;
-  std::unordered_map<long, Command<std::nullptr_t> *> commands_null_;
-  std::unordered_map<long, Command<std::vector<std::string>> *> commands_vector_string_;
-  std::unordered_map<long, Command<std::set<std::string>> *> commands_set_string_;
-  std::unordered_map<long, Command<std::unordered_set<std::string>> *>
-      commands_unordered_set_string_;*/
-  std::mutex command_map_guard_; // Guards access to all of the above
-
-  // Return the command map corresponding to the templated reply type
-  std::unordered_map<long, Command_t *> &getCommandMap() {return commands_reply_;};
-
-
   // Command IDs pending to be sent to the server
-  std::queue<long> command_queue_;
+  std::queue<Command_t *> command_queue_;
   std::mutex queue_guard_;
 
   // Commands IDs pending to be freed by the event loop
@@ -425,11 +392,8 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
                                 callback, repeat, after, free_memory, logger_);
 
   std::lock_guard<std::mutex> lg(queue_guard_);
-  std::lock_guard<std::mutex> lg2(command_map_guard_);
 
-  commands_reply_[c->id_] = c;
-  //getCommandMap<ReplyT>()[c->id_] = c;
-  command_queue_.push(c->id_);
+  command_queue_.push(c);
 
   // Signal the event loop to process this command
   ev_async_send(evloop_, &watcher_command_);
@@ -462,29 +426,12 @@ template <class ReplyT> Command<ReplyT> &Redox::commandSync(const std::vector<st
   return c;
 }
 
-template <class ReplyT> Command<ReplyT> *Redox::findCommand(long id) {
-
-  std::lock_guard<std::mutex> lg(command_map_guard_);
-
-  auto &command_map = getCommandMap();
-  auto it = command_map.find(id);
-  if (it == command_map.end())
-    return nullptr;
-  return (Command<ReplyT> *)it->second;
-}
-
 template <class ReplyT>
 void Redox::commandCallback(redisAsyncContext *ctx, void *r, void *privdata) {
 
-  Redox *rdx = (Redox *)ctx->data;
-  long id = (long)privdata;
+  //Redox *rdx = (Redox *)ctx->data;
+  auto c = (Command<ReplyT> *)privdata;
   redisReply *reply_obj = (redisReply *)r;
-
-  Command<ReplyT> *c = rdx->findCommand<ReplyT>(id);
-  if (c == nullptr) {
-    freeReplyObject(reply_obj);
-    return;
-  }
 
   c->processReply(reply_obj);
 }
@@ -504,7 +451,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
   std::transform(c->cmd_.begin(), c->cmd_.end(), std::back_inserter(argvlen),
             [](const std::string &s) { return s.size(); });
 
-  if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c->id_, argv.size(),
+  if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c, argv.size(),
                             &argv[0], &argvlen[0]) != REDIS_OK) {
     rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
     c->reply_status_ = Command<ReplyT>::SEND_ERROR;
@@ -518,15 +465,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
 template <class ReplyT>
 void Redox::submitCommandCallback(struct ev_loop *loop, ev_timer *timer, int revents) {
 
-  Redox *rdx = (Redox *)ev_userdata(loop);
-  long id = (long)timer->data;
-
-  Command<ReplyT> *c = rdx->findCommand<ReplyT>(id);
-  if (c == nullptr) {
-    rdx->logger_.error() << "Couldn't find Command " << id
-                         << " in command_map (submitCommandCallback).";
-    return;
-  }
+  auto c = (Command<ReplyT> *)timer->data;
 
   submitToServer<ReplyT>(c);
 }
@@ -538,7 +477,7 @@ template <class ReplyT> bool Redox::processQueuedCommand(Command<ReplyT>* c) {
 
   } else {
 
-    c->timer_.data = (void *)c->id_;
+    c->timer_.data = (void *)c;
     ev_timer_init(&c->timer_, submitCommandCallback<ReplyT>, c->after_, c->repeat_);
     ev_timer_start(evloop_, &c->timer_);
 

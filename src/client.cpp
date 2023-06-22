@@ -350,42 +350,17 @@ void Redox::runEventLoop() {
   logger_.info() << "Event thread exited.";
 }
 
-Command_t *Redox::findCommand(long id) {
-    lock_guard<mutex> lg(command_map_guard_);
-    auto command_map = getCommandMap();
-    auto it = command_map.find(id);
-    if (it == command_map.end())
-        return nullptr;
-    return it->second;
-}
-
 void Redox::processQueuedCommands(struct ev_loop *loop, ev_async *async, int revents) {
 
   Redox *rdx = (Redox *)ev_userdata(loop);
 
   lock_guard<mutex> lg(rdx->queue_guard_);
-  auto command_map = rdx->getCommandMap();
 
   while (!rdx->command_queue_.empty()) {
 
-    long id = rdx->command_queue_.front();
+    auto c = rdx->command_queue_.front();
     rdx->command_queue_.pop();
-    auto c = rdx->findCommand(id);
-    if (c == nullptr) continue;
     c->processQueuedCommand_t();
-
-    /*if (rdx->processQueuedCommand<redisReply *>(id)) {
-    } else if (rdx->processQueuedCommand<string>(id)) {
-    } else if (rdx->processQueuedCommand<char *>(id)) {
-    } else if (rdx->processQueuedCommand<int>(id)) {
-    } else if (rdx->processQueuedCommand<long long int>(id)) {
-    } else if (rdx->processQueuedCommand<nullptr_t>(id)) {
-    } else if (rdx->processQueuedCommand<vector<string>>(id)) {
-    } else if (rdx->processQueuedCommand<std::set<string>>(id)) {
-    } else if (rdx->processQueuedCommand<unordered_set<string>>(id)) {
-    } else
-      throw runtime_error("Command pointer not found in any queue!");
-      */
   }
 }
 
@@ -398,7 +373,8 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
   while (!rdx->commands_to_free_.empty()) {
     auto c = rdx->commands_to_free_.front();
     rdx->commands_to_free_.pop();
-    c->freeReply_t(true);
+    c->freeReply_t();
+    rdx->deregisterCommand();
     delete c;
   }
 }
@@ -416,113 +392,31 @@ template <class ReplyT> bool Redox::freeQueuedCommand(long id) {
     ev_timer_stop(c->rdx_->evloop_, &c->timer_);
   }
 
-  deregisterCommand<ReplyT>(c->id_);
-
+  deregisterCommand();
+//FIXME free
   delete c;
 
   return true;
 }
 
 long Redox::freeAllCommands() {
-  return freeAllCommands_t() +
-         freeAllCommandsOfType<redisReply *>() + freeAllCommandsOfType<string>() +
-         freeAllCommandsOfType<char *>() + freeAllCommandsOfType<int>() +
-         freeAllCommandsOfType<long long int>() + freeAllCommandsOfType<nullptr_t>() +
-         freeAllCommandsOfType<vector<string>>() + freeAllCommandsOfType<std::set<string>>() +
-         freeAllCommandsOfType<unordered_set<string>>();
-}
-
-long Redox::freeAllCommands_t() {
-
   lock_guard<mutex> lg(free_queue_guard_);
   lock_guard<mutex> lg2(queue_guard_);
-  lock_guard<mutex> lg3(command_map_guard_);
 
-  long len = commands_reply_.size();
+  long len = 0;
 
-  for (auto &pair : commands_reply_) {
-    Command_t *c = pair.second;
-    c->freeReply_t(false);
+  while (!command_queue_.empty()) {
+    auto c = command_queue_.front();
+    command_queue_.pop();
+    c->freeReply_t();
+    len++;
     delete c;
   }
 
-  commands_reply_.clear();
   commands_deleted_ += len;
 
   return len;
 }
-
-template <class ReplyT> long Redox::freeAllCommandsOfType() {
-
-  lock_guard<mutex> lg(free_queue_guard_);
-  lock_guard<mutex> lg2(queue_guard_);
-  lock_guard<mutex> lg3(command_map_guard_);
-
-  auto &command_map = getCommandMap();
-  long len = command_map.size();
-
-  for (auto &pair : command_map) {
-    Command<ReplyT> *c = (Command<ReplyT> *)pair.second;
-
-    c->freeReply();
-
-    // Stop the libev timer if this is a repeating command
-    if ((c->repeat_ != 0) || (c->after_ != 0)) {
-      lock_guard<mutex> lg3(c->timer_guard_);
-      ev_timer_stop(c->rdx_->evloop_, &c->timer_);
-    }
-
-    delete c;
-  }
-
-  command_map.clear();
-  commands_deleted_ += len;
-
-  return len;
-}
-
-// ---------------------------------
-// get_command_map specializations
-// ---------------------------------
-/*
-template <> unordered_map<long, Command<redisReply *> *> &Redox::getCommandMap<redisReply *>() {
-  return commands_redis_reply_;
-}
-
-template <> unordered_map<long, Command<string> *> &Redox::getCommandMap<string>() {
-  return commands_string_;
-}
-
-template <> unordered_map<long, Command<char *> *> &Redox::getCommandMap<char *>() {
-  return commands_char_p_;
-}
-
-template <> unordered_map<long, Command<int> *> &Redox::getCommandMap<int>() {
-  return commands_int_;
-}
-
-template <> unordered_map<long, Command<long long int> *> &Redox::getCommandMap<long long int>() {
-  return commands_long_long_int_;
-}
-
-template <> unordered_map<long, Command<nullptr_t> *> &Redox::getCommandMap<nullptr_t>() {
-  return commands_null_;
-}
-
-template <> unordered_map<long, Command<vector<string>> *> &Redox::getCommandMap<vector<string>>() {
-  return commands_vector_string_;
-}
-
-template <> unordered_map<long, Command<set<string>> *> &Redox::getCommandMap<set<string>>() {
-  return commands_set_string_;
-}
-
-template <>
-unordered_map<long, Command<unordered_set<string>> *> &
-Redox::getCommandMap<unordered_set<string>>() {
-  return commands_unordered_set_string_;
-}
-*/
 
 // ----------------------------
 // Helpers
