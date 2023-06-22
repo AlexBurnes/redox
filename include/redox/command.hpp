@@ -37,6 +37,11 @@
 
 namespace redox {
 
+struct formated_string {
+    char *str;
+    int len;
+};
+
 class Redox;
 
 /**
@@ -46,6 +51,9 @@ class Redox;
 * represent a deferred or looping command, in which case the success or
 * error callbacks are invoked more than once.
 */
+
+formated_string FormatCommand(const char *format, ...);
+
 
 class Command_t {
     public:
@@ -123,7 +131,7 @@ private:
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 
-  Command(Redox *rdx, long id, const sds *cmd,
+  Command(Redox *rdx, long id, formated_string cmd,
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 

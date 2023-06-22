@@ -23,6 +23,10 @@
 
 using namespace std;
 
+void *hi_malloc(unsigned long size){
+    return malloc(size);
+}
+
 namespace {
 
 template<typename tev, typename tcb>
@@ -423,6 +427,7 @@ vector<string> Redox::strToVec(const string &s, const char delimiter) {
 }
 
 void Redox::command(const vector<string> &cmd) { command<redisReply *>(cmd, nullptr); }
+void Redox::command(formated_string cmd) { command<redisReply *>(cmd, nullptr); }
 
 bool Redox::commandSync(const vector<string> &cmd) {
   auto &c = commandSync<redisReply *>(cmd);

@@ -30,6 +30,17 @@ using namespace std;
 
 namespace redox {
 
+formated_string FormatCommand(const char *format, ...) {
+    char *target = nullptr;
+    va_list ap;
+    int len;
+    va_start(ap,format);
+    len = redisvFormatCommand(&target,format,ap);
+    va_end(ap);
+    //printf("formated target len %d\n", len);
+    return {target, len};
+}
+
 template <class ReplyT>
 Command<ReplyT>::Command(Redox *rdx, long id, const vector<string> &cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
@@ -40,7 +51,7 @@ Command<ReplyT>::Command(Redox *rdx, long id, const vector<string> &cmd,
 }
 
 template <class ReplyT>
-Command<ReplyT>::Command(Redox *rdx, long id, const sds *cmd,
+Command<ReplyT>::Command(Redox *rdx, long id, formated_string cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
                          double after, bool free_memory, log::Logger &logger)
     : Command_t(), rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
@@ -147,9 +158,8 @@ template <class ReplyT> string Command<ReplyT>::cmd() const {
     if (auto cmd_vec_str = any_cast<vector<string>>(&cmd_)) {
         return rdx_->vecToStr(*cmd_vec_str);
     }
-    else if (auto cmd_sds = any_cast<const sds>(&cmd_)) {
-        std::string s{*cmd_sds};
-        return s;
+    else if (auto cmd_fms = any_cast<formated_string>(&cmd_)) {
+        return (*cmd_fms).str;
     }
     else return "";
 }

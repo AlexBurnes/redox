@@ -131,10 +131,15 @@ public:
   void command(const std::vector<std::string> &cmd,
                const std::function<void(Command<ReplyT> &)> &callback = nullptr);
 
+  template <class ReplyT>
+  void command(formated_string cmd,
+               const std::function<void(Command<ReplyT> &)> &callback = nullptr);
+
   /**
   * Asynchronously runs a command and ignores any errors or replies.
   */
   void command(const std::vector<std::string> &cmd);
+  void command(formated_string cmd);
 
   /**
   * Synchronously runs a command, returning the Command object only once
@@ -268,6 +273,11 @@ private:
                                  const std::function<void(Command<ReplyT> &)> &callback = nullptr,
                                  double repeat = 0.0, double after = 0.0, bool free_memory = true);
 
+  template <class ReplyT>
+  Command<ReplyT> &createCommand(formated_string cmd,
+                                 const std::function<void(Command<ReplyT> &)> &callback = nullptr,
+                                 double repeat = 0.0, double after = 0.0, bool free_memory = true);
+
   // Setup code for the constructors
   // Return true on success, false on failure
   bool initEv();
@@ -279,11 +289,6 @@ private:
 
   // Main event loop, run in a separate thread
   void runEventLoop();
-
-  Command_t* findCommand(long id);
-
-  // Return the given Command from the relevant command map, or nullptr if not there
-  template <class ReplyT> Command<ReplyT> *findCommand(long id);
 
   // Send all commands in the command queue to the server
   static void processQueuedCommands(struct ev_loop *loop, ev_async *async, int revents);
@@ -398,7 +403,37 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
 }
 
 template <class ReplyT>
+Command<ReplyT> &Redox::createCommand(formated_string cmd,
+                                      const std::function<void(Command<ReplyT> &)> &callback,
+                                      double repeat, double after, bool free_memory) {
+  {
+    std::unique_lock<std::mutex> ul(running_lock_);
+    if (!running_) {
+      throw std::runtime_error("[ERROR] Need to connect Redox before running commands!");
+    }
+  }
+
+  auto *c = new Command<ReplyT>(this, commands_created_.fetch_add(1), cmd,
+                                callback, repeat, after, free_memory, logger_);
+
+  std::lock_guard<std::mutex> lg(queue_guard_);
+
+  command_queue_.push(c);
+
+  // Signal the event loop to process this command
+  ev_async_send(evloop_, &watcher_command_);
+
+  return *c;
+}
+
+template <class ReplyT>
 void Redox::command(const std::vector<std::string> &cmd,
+                    const std::function<void(Command<ReplyT> &)> &callback) {
+  createCommand(cmd, callback);
+}
+
+template <class ReplyT>
+void Redox::command(formated_string cmd,
                     const std::function<void(Command<ReplyT> &)> &callback) {
   createCommand(cmd, callback);
 }
@@ -447,20 +482,29 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
     std::transform(cmd_->begin(), cmd_->end(), std::back_inserter(argvlen),
        [](const std::string &s) { return s.size(); });
     if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c, argv.size(),
-                            &argv[0], &argvlen[0]) != REDIS_OK) {
+                              &argv[0], &argvlen[0]) != REDIS_OK) {
         rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
         c->invoke();
         return false;
     }
     return true;
-   }
-   else if (auto cmd_ = std::any_cast<const sds>(&c->cmd_)) {
-       //error no supported yet type
-       return false;
-   }
-   // error no supprted type
-   return false;
+  }
+  else if (auto cmd_ = std::any_cast<formated_string>(&c->cmd_)) {
+    //error no supported yet type
+    //printf("submit sds len %d, %.*s\n", (*cmd_).len, (*cmd_).len, (*cmd_).str);
+    if (redisAsyncFormattedCommand(rdx->ctx_, commandCallback<ReplyT>, (void *)c,
+                                   (*cmd_).str, (*cmd_).len) != REDIS_OK) {
+        rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+        c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+        c->invoke();
+        free((*cmd_).str);
+        return false;
+    }
+    free((*cmd_).str);
+  }
+  // error no supprted type
+  return false;
 }
 
 template <class ReplyT>

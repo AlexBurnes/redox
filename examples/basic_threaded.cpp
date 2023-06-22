@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   thread getter([]() {
     for(int i = 0; i < 5; i++) {
       rdx.command<string>(
-          {"GET", "counter"},
+        redox::FormatCommand("GET %s", "counter"),
           [](Command<string>& c) {
             if(c.ok()) cout << c.cmd() << ": " << c.reply() << endl;
           }
