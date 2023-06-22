@@ -47,10 +47,8 @@ class Command_t {
     public:
         Command_t() {}
         virtual ~Command_t() {}
-        virtual void submitToServer() {};
-        virtual void freeReply_t() {
-        };
-        virtual void callbackCommand() {};
+        virtual void freeReply_t(bool deregister) {};
+        virtual bool processQueuedCommand_t() {return false;};
         Command_t(const Command_t &) = delete;
         Command_t &operator=(const Command_t &) = delete;
     friend class Redox;
@@ -140,11 +138,8 @@ private:
   // If needed, free the redisReply
   void freeReply();
 
-  void freeReply_t() override final;
-
-  // FIXME make implementation, get from Redox::
-  void submitToServer() override final {};
-  void callbackCommand() override final {};
+  void freeReply_t(bool deregister) override final;
+  bool processQueuedCommand_t() override final;
 
   // The last server reply
   redisReply *reply_obj_ = nullptr;

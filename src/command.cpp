@@ -96,7 +96,7 @@ template <class ReplyT> void Command<ReplyT>::free() {
   ev_async_send(rdx_->evloop_, &rdx_->watcher_free_);
 }
 
-template <class ReplyT> void Command<ReplyT>::freeReply_t() {
+template <class ReplyT> void Command<ReplyT>::freeReply_t(bool deregister) {
   freeReply();
   // Stop the libev timer if this is a repeating command
   if ((repeat_ != 0) || (after_ != 0)) {
@@ -104,7 +104,7 @@ template <class ReplyT> void Command<ReplyT>::freeReply_t() {
     ev_timer_stop(rdx_->evloop_, &timer_);
   }
 
-  rdx_->deregisterCommand<ReplyT>(id_);
+  if (deregister) rdx_->deregisterCommand<ReplyT>(id_);
 
   return;
 }
@@ -269,6 +269,11 @@ template <> void Command<set<string>>::parseReplyObject() {
     redisReply *r = *(reply_obj_->element + i);
     reply_val_.emplace(r->str, r->len);
   }
+}
+
+template<typename ReplyT>
+bool Command<ReplyT>::processQueuedCommand_t() {
+  return rdx_->processQueuedCommand<ReplyT>(this);
 }
 
 // Explicit template instantiation for available types, so that the generated

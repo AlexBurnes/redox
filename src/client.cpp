@@ -19,7 +19,6 @@
 */
 
 #include <signal.h>
-#include <algorithm>
 #include "client.hpp"
 
 using namespace std;
@@ -353,100 +352,11 @@ void Redox::runEventLoop() {
 
 Command_t *Redox::findCommand(long id) {
     lock_guard<mutex> lg(command_map_guard_);
-    auto it = commands_reply_.find(id);
-    if (it == commands_reply_.end())
+    auto command_map = getCommandMap();
+    auto it = command_map.find(id);
+    if (it == command_map.end())
         return nullptr;
     return it->second;
-}
-
-template <class ReplyT> Command<ReplyT> *Redox::findCommand(long id) {
-
-  lock_guard<mutex> lg(command_map_guard_);
-
-  auto &command_map = getCommandMap<ReplyT>();
-  auto it = command_map.find(id);
-  if (it == command_map.end())
-    return nullptr;
-  return it->second;
-}
-
-template <class ReplyT>
-void Redox::commandCallback(redisAsyncContext *ctx, void *r, void *privdata) {
-
-  Redox *rdx = (Redox *)ctx->data;
-  long id = (long)privdata;
-  redisReply *reply_obj = (redisReply *)r;
-
-  Command<ReplyT> *c = rdx->findCommand<ReplyT>(id);
-  if (c == nullptr) {
-    freeReplyObject(reply_obj);
-    return;
-  }
-
-  c->processReply(reply_obj);
-}
-
-template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
-
-  Redox *rdx = c->rdx_;
-  c->pending_++;
-
-  // Construct a char** from the vector
-  vector<const char *> argv;
-  transform(c->cmd_.begin(), c->cmd_.end(), back_inserter(argv),
-            [](const string &s) { return s.c_str(); });
-
-  // Construct a size_t* of string lengths from the vector
-  vector<size_t> argvlen;
-  transform(c->cmd_.begin(), c->cmd_.end(), back_inserter(argvlen),
-            [](const string &s) { return s.size(); });
-
-  if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c->id_, argv.size(),
-                            &argv[0], &argvlen[0]) != REDIS_OK) {
-    rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
-    c->reply_status_ = Command<ReplyT>::SEND_ERROR;
-    c->invoke();
-    return false;
-  }
-
-  return true;
-}
-
-template <class ReplyT>
-void Redox::submitCommandCallback(struct ev_loop *loop, ev_timer *timer, int revents) {
-
-  Redox *rdx = (Redox *)ev_userdata(loop);
-  long id = (long)timer->data;
-
-  Command<ReplyT> *c = rdx->findCommand<ReplyT>(id);
-  if (c == nullptr) {
-    rdx->logger_.error() << "Couldn't find Command " << id
-                         << " in command_map (submitCommandCallback).";
-    return;
-  }
-
-  submitToServer<ReplyT>(c);
-}
-
-template <class ReplyT> bool Redox::processQueuedCommand(long id) {
-
-  Command<ReplyT> *c = findCommand<ReplyT>(id);
-  if (c == nullptr)
-    return false;
-
-  if ((c->repeat_ == 0) && (c->after_ == 0)) {
-    submitToServer<ReplyT>(c);
-
-  } else {
-
-    c->timer_.data = (void *)c->id_;
-    redox_ev_timer_init(&c->timer_, submitCommandCallback<ReplyT>, c->after_, c->repeat_);
-    ev_timer_start(evloop_, &c->timer_);
-
-    c->timer_guard_.unlock();
-  }
-
-  return true;
 }
 
 void Redox::processQueuedCommands(struct ev_loop *loop, ev_async *async, int revents) {
@@ -454,13 +364,17 @@ void Redox::processQueuedCommands(struct ev_loop *loop, ev_async *async, int rev
   Redox *rdx = (Redox *)ev_userdata(loop);
 
   lock_guard<mutex> lg(rdx->queue_guard_);
+  auto command_map = rdx->getCommandMap();
 
   while (!rdx->command_queue_.empty()) {
 
     long id = rdx->command_queue_.front();
     rdx->command_queue_.pop();
+    auto c = rdx->findCommand(id);
+    if (c == nullptr) continue;
+    c->processQueuedCommand_t();
 
-    if (rdx->processQueuedCommand<redisReply *>(id)) {
+    /*if (rdx->processQueuedCommand<redisReply *>(id)) {
     } else if (rdx->processQueuedCommand<string>(id)) {
     } else if (rdx->processQueuedCommand<char *>(id)) {
     } else if (rdx->processQueuedCommand<int>(id)) {
@@ -471,6 +385,7 @@ void Redox::processQueuedCommands(struct ev_loop *loop, ev_async *async, int rev
     } else if (rdx->processQueuedCommand<unordered_set<string>>(id)) {
     } else
       throw runtime_error("Command pointer not found in any queue!");
+      */
   }
 }
 
@@ -483,7 +398,7 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
   while (!rdx->commands_to_free_.empty()) {
     auto c = rdx->commands_to_free_.front();
     rdx->commands_to_free_.pop();
-    c->freeReply_t();
+    c->freeReply_t(true);
     delete c;
   }
 }
@@ -509,11 +424,32 @@ template <class ReplyT> bool Redox::freeQueuedCommand(long id) {
 }
 
 long Redox::freeAllCommands() {
-  return freeAllCommandsOfType<redisReply *>() + freeAllCommandsOfType<string>() +
+  return freeAllCommands_t() +
+         freeAllCommandsOfType<redisReply *>() + freeAllCommandsOfType<string>() +
          freeAllCommandsOfType<char *>() + freeAllCommandsOfType<int>() +
          freeAllCommandsOfType<long long int>() + freeAllCommandsOfType<nullptr_t>() +
          freeAllCommandsOfType<vector<string>>() + freeAllCommandsOfType<std::set<string>>() +
          freeAllCommandsOfType<unordered_set<string>>();
+}
+
+long Redox::freeAllCommands_t() {
+
+  lock_guard<mutex> lg(free_queue_guard_);
+  lock_guard<mutex> lg2(queue_guard_);
+  lock_guard<mutex> lg3(command_map_guard_);
+
+  long len = commands_reply_.size();
+
+  for (auto &pair : commands_reply_) {
+    Command_t *c = pair.second;
+    c->freeReply_t(false);
+    delete c;
+  }
+
+  commands_reply_.clear();
+  commands_deleted_ += len;
+
+  return len;
 }
 
 template <class ReplyT> long Redox::freeAllCommandsOfType() {
@@ -522,11 +458,11 @@ template <class ReplyT> long Redox::freeAllCommandsOfType() {
   lock_guard<mutex> lg2(queue_guard_);
   lock_guard<mutex> lg3(command_map_guard_);
 
-  auto &command_map = getCommandMap<ReplyT>();
+  auto &command_map = getCommandMap();
   long len = command_map.size();
 
   for (auto &pair : command_map) {
-    Command<ReplyT> *c = pair.second;
+    Command<ReplyT> *c = (Command<ReplyT> *)pair.second;
 
     c->freeReply();
 
@@ -548,7 +484,7 @@ template <class ReplyT> long Redox::freeAllCommandsOfType() {
 // ---------------------------------
 // get_command_map specializations
 // ---------------------------------
-
+/*
 template <> unordered_map<long, Command<redisReply *> *> &Redox::getCommandMap<redisReply *>() {
   return commands_redis_reply_;
 }
@@ -586,6 +522,7 @@ unordered_map<long, Command<unordered_set<string>> *> &
 Redox::getCommandMap<unordered_set<string>>() {
   return commands_unordered_set_string_;
 }
+*/
 
 // ----------------------------
 // Helpers
