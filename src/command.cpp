@@ -21,6 +21,7 @@
 #include <vector>
 #include <set>
 #include <unordered_set>
+#include <any>
 
 #include "command.hpp"
 #include "client.hpp"
@@ -31,6 +32,15 @@ namespace redox {
 
 template <class ReplyT>
 Command<ReplyT>::Command(Redox *rdx, long id, const vector<string> &cmd,
+                         const function<void(Command<ReplyT> &)> &callback, double repeat,
+                         double after, bool free_memory, log::Logger &logger)
+    : Command_t(), rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
+      callback_(callback), last_error_(), logger_(logger) {
+  timer_guard_.lock();
+}
+
+template <class ReplyT>
+Command<ReplyT>::Command(Redox *rdx, long id, const sds *cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
                          double after, bool free_memory, log::Logger &logger)
     : Command_t(), rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
@@ -133,7 +143,16 @@ template <class ReplyT> ReplyT Command<ReplyT>::reply() {
   return reply_val_;
 }
 
-template <class ReplyT> string Command<ReplyT>::cmd() const { return rdx_->vecToStr(cmd_); }
+template <class ReplyT> string Command<ReplyT>::cmd() const {
+    if (auto cmd_vec_str = any_cast<vector<string>>(&cmd_)) {
+        return rdx_->vecToStr(*cmd_vec_str);
+    }
+    else if (auto cmd_sds = any_cast<const sds>(&cmd_)) {
+        std::string s{*cmd_sds};
+        return s;
+    }
+    else return "";
+}
 
 template <class ReplyT> bool Command<ReplyT>::isExpectedReply(int type) {
 

@@ -439,23 +439,28 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
 
   // Construct a char** from the vector
   std::vector<const char *> argv;
-  std::transform(c->cmd_.begin(), c->cmd_.end(), std::back_inserter(argv),
-            [](const std::string &s) { return s.c_str(); });
-
-  // Construct a size_t* of string lengths from the vector
-  std::vector<size_t> argvlen;
-  std::transform(c->cmd_.begin(), c->cmd_.end(), std::back_inserter(argvlen),
-            [](const std::string &s) { return s.size(); });
-
-  if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c, argv.size(),
+  if (auto cmd_ = std::any_cast<std::vector<std::string>>(&c->cmd_)) {
+    std::transform(cmd_->begin(), cmd_->end(), std::back_inserter(argv),
+       [](const std::string &s) { return s.c_str(); });
+    // Construct a size_t* of string lengths from the vector
+    std::vector<size_t> argvlen;
+    std::transform(cmd_->begin(), cmd_->end(), std::back_inserter(argvlen),
+       [](const std::string &s) { return s.size(); });
+    if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c, argv.size(),
                             &argv[0], &argvlen[0]) != REDIS_OK) {
-    rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
-    c->reply_status_ = Command<ReplyT>::SEND_ERROR;
-    c->invoke();
-    return false;
-  }
-
-  return true;
+        rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+        c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+        c->invoke();
+        return false;
+    }
+    return true;
+   }
+   else if (auto cmd_ = std::any_cast<const sds>(&c->cmd_)) {
+       //error no supported yet type
+       return false;
+   }
+   // error no supprted type
+   return false;
 }
 
 template <class ReplyT>

@@ -25,9 +25,13 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <any>
 
 #include <hiredis/adapters/libev.h>
 #include <hiredis/async.h>
+
+// SDS C dynamic string from hiredis
+#include <hiredis/sds.h>
 
 #include "utils/logger.hpp"
 
@@ -106,7 +110,10 @@ public:
   // Allow public access to constructed data
   Redox *const rdx_;
   const long id_;
-  const std::vector<std::string> cmd_;
+
+
+  std::any cmd_;
+
   const double repeat_;
   const double after_;
   const bool free_memory_;
@@ -115,6 +122,11 @@ private:
   Command(Redox *rdx, long id, const std::vector<std::string> &cmd,
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
+
+  Command(Redox *rdx, long id, const sds *cmd,
+          const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
+          bool free_memory, log::Logger &logger);
+
   ~Command() override final {};
 
   // Handles a new reply from the server
