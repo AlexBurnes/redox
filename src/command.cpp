@@ -33,7 +33,7 @@ template <class ReplyT>
 Command<ReplyT>::Command(Redox *rdx, long id, const vector<string> &cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
                          double after, bool free_memory, log::Logger &logger)
-    : rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
+    : Command_t(), rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
       callback_(callback), last_error_(), logger_(logger) {
   timer_guard_.lock();
 }
@@ -92,8 +92,21 @@ template <class ReplyT> void Command<ReplyT>::processReply(redisReply *r) {
 template <class ReplyT> void Command<ReplyT>::free() {
 
   lock_guard<mutex> lg(rdx_->free_queue_guard_);
-  rdx_->commands_to_free_.push(id_);
+  rdx_->commands_to_free_.push(this);
   ev_async_send(rdx_->evloop_, &rdx_->watcher_free_);
+}
+
+template <class ReplyT> void Command<ReplyT>::freeReply_t() {
+  freeReply();
+  // Stop the libev timer if this is a repeating command
+  if ((repeat_ != 0) || (after_ != 0)) {
+    lock_guard<mutex> lg(timer_guard_);
+    ev_timer_stop(rdx_->evloop_, &timer_);
+  }
+
+  rdx_->deregisterCommand<ReplyT>(id_);
+
+  return;
 }
 
 template <class ReplyT> void Command<ReplyT>::freeReply() {

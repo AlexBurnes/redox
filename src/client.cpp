@@ -351,6 +351,14 @@ void Redox::runEventLoop() {
   logger_.info() << "Event thread exited.";
 }
 
+Command_t *Redox::findCommand(long id) {
+    lock_guard<mutex> lg(command_map_guard_);
+    auto it = commands_reply_.find(id);
+    if (it == commands_reply_.end())
+        return nullptr;
+    return it->second;
+}
+
 template <class ReplyT> Command<ReplyT> *Redox::findCommand(long id) {
 
   lock_guard<mutex> lg(command_map_guard_);
@@ -473,20 +481,10 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
   lock_guard<mutex> lg(rdx->free_queue_guard_);
 
   while (!rdx->commands_to_free_.empty()) {
-    long id = rdx->commands_to_free_.front();
+    auto c = rdx->commands_to_free_.front();
     rdx->commands_to_free_.pop();
-
-    if (rdx->freeQueuedCommand<redisReply *>(id)) {
-    } else if (rdx->freeQueuedCommand<string>(id)) {
-    } else if (rdx->freeQueuedCommand<char *>(id)) {
-    } else if (rdx->freeQueuedCommand<int>(id)) {
-    } else if (rdx->freeQueuedCommand<long long int>(id)) {
-    } else if (rdx->freeQueuedCommand<nullptr_t>(id)) {
-    } else if (rdx->freeQueuedCommand<vector<string>>(id)) {
-    } else if (rdx->freeQueuedCommand<std::set<string>>(id)) {
-    } else if (rdx->freeQueuedCommand<unordered_set<string>>(id)) {
-    } else {
-    }
+    c->freeReply_t();
+    delete c;
   }
 }
 

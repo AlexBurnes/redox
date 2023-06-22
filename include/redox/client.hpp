@@ -235,6 +235,21 @@ public:
   // Logger
   log::Logger logger_;
 
+
+  // FIXME make it private again
+  // Invoked by Command objects when they are completed. Removes them
+  // from the command map.
+  template <class ReplyT> void deregisterCommand(const long id) {
+    std::lock_guard<std::mutex> lg1(command_map_guard_);
+    getCommandMap<ReplyT>().erase(id);
+    commands_deleted_ += 1;
+  }
+
+  // FIXME make it private again
+  // Dynamically allocated libev event loop
+  struct ev_loop *evloop_;
+
+
 private:
   // ------------------------------------------------
   // Private methods
@@ -264,6 +279,8 @@ private:
 
   // Return the command map corresponding to the templated reply type
   template <class ReplyT> std::unordered_map<long, Command<ReplyT> *> &getCommandMap();
+
+  Command_t *findCommand(long id);
 
   // Return the given Command from the relevant command map, or nullptr if not there
   template <class ReplyT> Command<ReplyT> *findCommand(long id);
@@ -295,14 +312,6 @@ private:
   // type, and false if it was not in the command map of that type.
   template <class ReplyT> bool freeQueuedCommand(long id);
 
-  // Invoked by Command objects when they are completed. Removes them
-  // from the command map.
-  template <class ReplyT> void deregisterCommand(const long id) {
-    std::lock_guard<std::mutex> lg1(command_map_guard_);
-    getCommandMap<ReplyT>().erase(id);
-    commands_deleted_ += 1;
-  }
-
   // Free all commands remaining in the command maps
   long freeAllCommands();
 
@@ -328,9 +337,6 @@ private:
 
   // User connect/disconnect callbacks
   std::function<void(int)> user_connection_callback_;
-
-  // Dynamically allocated libev event loop
-  struct ev_loop *evloop_;
 
   // No-wait mode for high-performance
   std::atomic_bool nowait_ = {false};
@@ -365,6 +371,7 @@ private:
   // template<class ReplyT>
   // std::unordered_map<long, Command<ReplyT>*> commands_;
   // ---------
+  std::unordered_map<long, Command_t *> commands_reply_;
   std::unordered_map<long, Command<redisReply *> *> commands_redis_reply_;
   std::unordered_map<long, Command<std::string> *> commands_string_;
   std::unordered_map<long, Command<char *> *> commands_char_p_;
@@ -382,7 +389,7 @@ private:
   std::mutex queue_guard_;
 
   // Commands IDs pending to be freed by the event loop
-  std::queue<long> commands_to_free_;
+  std::queue<Command_t *> commands_to_free_;
   std::mutex free_queue_guard_;
 
   // Commands use this method to deregister themselves from Redox,
@@ -408,7 +415,7 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
     }
   }
 
-  auto *c = new Command<ReplyT>(this, commands_created_.fetch_add(1), cmd, 
+  auto *c = new Command<ReplyT>(this, commands_created_.fetch_add(1), cmd,
                                 callback, repeat, after, free_memory, logger_);
 
   std::lock_guard<std::mutex> lg(queue_guard_);

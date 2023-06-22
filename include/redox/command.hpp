@@ -42,7 +42,21 @@ class Redox;
 * represent a deferred or looping command, in which case the success or
 * error callbacks are invoked more than once.
 */
-template <class ReplyT> class Command {
+
+class Command_t {
+    public:
+        Command_t() {}
+        virtual ~Command_t() {}
+        virtual void submitToServer() {};
+        virtual void freeReply_t() {
+        };
+        virtual void callbackCommand() {};
+        Command_t(const Command_t &) = delete;
+        Command_t &operator=(const Command_t &) = delete;
+    friend class Redox;
+};
+
+template <class ReplyT> class Command : public Command_t {
 
 public:
   // Reply codes
@@ -103,6 +117,7 @@ private:
   Command(Redox *rdx, long id, const std::vector<std::string> &cmd,
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
+  ~Command() override final {};
 
   // Handles a new reply from the server
   void processReply(redisReply *r);
@@ -124,6 +139,12 @@ private:
 
   // If needed, free the redisReply
   void freeReply();
+
+  void freeReply_t() override final;
+
+  // FIXME make implementation, get from Redox::
+  void submitToServer() override final {};
+  void callbackCommand() override final {};
 
   // The last server reply
   redisReply *reply_obj_ = nullptr;
