@@ -37,8 +37,8 @@ formated_string FormatCommand(const char *format, ...) {
     va_start(ap,format);
     len = redisvFormatCommand(&target,format,ap);
     va_end(ap);
-    // to avoid brace initializer ambigouty
-    return formated_string{target, len, format};
+    // to avoid brace initializer ambiguity
+    return formated_string {target, len, format};
 }
 
 template <class ReplyT>
@@ -51,7 +51,7 @@ Command<ReplyT>::Command(Redox *rdx, long id, const vector<string> &cmd,
 }
 
 template <class ReplyT>
-Command<ReplyT>::Command(Redox *rdx, long id, formated_string cmd,
+Command<ReplyT>::Command(Redox *rdx, long id, const formated_string& cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
                          double after, bool free_memory, log::Logger &logger)
     : Command_t(), rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
@@ -62,6 +62,7 @@ Command<ReplyT>::Command(Redox *rdx, long id, formated_string cmd,
 template <class ReplyT>
 Command<ReplyT>::~Command() {
   if (auto cmd_fs = std::any_cast<formated_string>(&cmd_)) {
+      //FIXME free resource at desctuctor
       ::free((void *)cmd_fs->str);
   }
 }

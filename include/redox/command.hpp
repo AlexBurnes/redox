@@ -55,7 +55,6 @@ class Redox;
 
 formated_string FormatCommand(const char *format, ...);
 
-
 class Command_t {
     public:
         Command_t() {}
@@ -132,7 +131,7 @@ private:
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 
-  Command(Redox *rdx, long id, formated_string cmd,
+  Command(Redox *rdx, long id, const formated_string& cmd,
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 
