@@ -40,6 +40,7 @@ namespace redox {
 struct formated_string {
     char *str;
     int len;
+    const char *format;
 };
 
 class Redox;
@@ -135,7 +136,7 @@ private:
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 
-  ~Command() override final {};
+  ~Command() override final;
 
   // Handles a new reply from the server
   void processReply(redisReply *r);

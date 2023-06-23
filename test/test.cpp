@@ -138,6 +138,7 @@ protected:
     EXPECT_FALSE(c.lastError().empty());
     //      EXPECT_EQ(value, c.reply());
     cout << c.cmd() << ": " << c.lastError() << endl;
+    c.free();
   }
 };
 
@@ -260,7 +261,8 @@ TEST_F(RedoxTest, MultithreadedCRUD) {
     }
     for (int i = 0; i < count; ++i) {
       try {
-        rdx.commandSync<string>({"SET", "redox_test:mt", "create"});
+        auto &c = rdx.commandSync<string>({"SET", "redox_test:mt", "create"});
+        c.free();
       }
       catch (...) {
         createExcCount++;
@@ -276,7 +278,8 @@ TEST_F(RedoxTest, MultithreadedCRUD) {
     }
     for (int i = 0; i < count; ++i) {
       try {
-        rdx.commandSync<int>({"DEL", "redox_test:mt"});
+        auto &c = rdx.commandSync<int>({"DEL", "redox_test:mt"});
+        c.free();
       }
       catch (...) {
         deleteExcCount++;
