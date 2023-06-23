@@ -67,8 +67,9 @@ protected:
     cmd_count++;
     return [this, value](Command<ReplyT> &c) {
       EXPECT_TRUE(c.ok());
-      if (c.ok())
+      if (c.ok()) {
         EXPECT_EQ(value, c.reply());
+      }
       cmd_count--;
       cmd_waiter.notify_all();
     };

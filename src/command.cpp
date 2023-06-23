@@ -25,21 +25,11 @@
 
 #include "command.hpp"
 #include "client.hpp"
+#include "format.hpp"
 
 using namespace std;
 
 namespace redox {
-
-formated_string FormatCommand(const char *format, ...) {
-    char *target = nullptr;
-    va_list ap;
-    int len;
-    va_start(ap,format);
-    len = redisvFormatCommand(&target,format,ap);
-    va_end(ap);
-    // to avoid brace initializer ambiguity
-    return formated_string {target, len, format};
-}
 
 template <class ReplyT>
 Command<ReplyT>::Command(Redox *rdx, long id, const vector<string> &cmd,
@@ -59,13 +49,13 @@ Command<ReplyT>::Command(Redox *rdx, long id, const formated_string& cmd,
   timer_guard_.lock();
 }
 
-template <class ReplyT>
+/*template <class ReplyT>
 Command<ReplyT>::~Command() {
   if (auto cmd_fs = std::any_cast<formated_string>(&cmd_)) {
       //FIXME free resource at desctuctor
-      ::free((void *)cmd_fs->str);
+      ::free((void *)cmd_fs->target);
   }
-}
+}*/
 
 template <class ReplyT> void Command<ReplyT>::wait() {
   unique_lock<mutex> lk(waiter_lock_);

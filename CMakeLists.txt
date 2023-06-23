@@ -61,12 +61,16 @@ set(INC_REDOX_DIR ${PROJECT_SOURCE_DIR}/include)
 set(SRC_REDOX_CORE
   ${SRC_REDOX_DIR}/client.cpp
   ${SRC_REDOX_DIR}/command.cpp
-  ${SRC_REDOX_DIR}/subscriber.cpp)
+  ${SRC_REDOX_DIR}/subscriber.cpp
+  ${SRC_REDOX_DIR}/format.cpp
+)
 
 set(INC_REDOX_CORE
     ${INC_REDOX_DIR}/redox/client.hpp
     ${INC_REDOX_DIR}/redox/subscriber.hpp
-    ${INC_REDOX_DIR}/redox/command.hpp)
+    ${INC_REDOX_DIR}/redox/command.hpp
+    ${INC_REDOX_DIR}/redox/format.hpp
+)
 
 set(SRC_REDOX_UTILS ${SRC_REDOX_DIR}/utils/logger.cpp)
 set(INC_REDOX_UTILS ${INC_REDOX_DIR}/redox/utils/logger.hpp)

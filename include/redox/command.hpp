@@ -30,20 +30,10 @@
 #include <hiredis/adapters/libev.h>
 #include <hiredis/async.h>
 
-// SDS C dynamic string from hiredis
-#include <hiredis/sds.h>
-
 #include "utils/logger.hpp"
+#include "format.hpp"
 
 namespace redox {
-
-//FIXME require add ctor(5) to follow RAII, right now it is dangerous, cleanuped by command free,
-//but upper application could ownes the formated string!
-struct formated_string {
-    char *str;
-    int len;
-    const char *format;
-};
 
 class Redox;
 
@@ -55,7 +45,6 @@ class Redox;
 * error callbacks are invoked more than once.
 */
 
-formated_string FormatCommand(const char *format, ...);
 
 class Command_t {
     public:
@@ -137,7 +126,7 @@ private:
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 
-  ~Command() override final;
+  ~Command() override final {};
 
   // Handles a new reply from the server
   void processReply(redisReply *r);

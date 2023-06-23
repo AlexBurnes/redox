@@ -40,6 +40,7 @@
 
 #include "utils/logger.hpp"
 #include "command.hpp"
+#include "format.hpp"
 
 namespace redox {
 
@@ -522,10 +523,8 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
     return true;
   }
   else if (auto cmd_ = std::any_cast<formated_string>(&c->cmd_)) {
-    //error no supported yet type
-    //printf("submit sds len %d, %.*s\n", (*cmd_).len, (*cmd_).len, (*cmd_).str);
     if (redisAsyncFormattedCommand(rdx->ctx_, commandCallback<ReplyT>, (void *)c,
-                                   (*cmd_).str, (*cmd_).len) != REDIS_OK) {
+                                   cmd_->target, cmd_->len) != REDIS_OK) {
         rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
         c->invoke();
