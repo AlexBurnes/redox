@@ -37,6 +37,8 @@
 
 namespace redox {
 
+//FIXME require add ctor(5) to follow RAII, right now it is dangerous, cleanuped by command free,
+//but upper application could ownes the formated string!
 struct formated_string {
     char *str;
     int len;
