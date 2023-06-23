@@ -108,8 +108,6 @@ public:
 
   // Allow public access to constructed data
   Redox *const rdx_;
-  const long id_;
-
 
   std::any cmd_;
 
@@ -118,11 +116,11 @@ public:
   const bool free_memory_;
 
 private:
-  Command(Redox *rdx, long id, const std::vector<std::string> &cmd,
+  Command(Redox *rdx, const std::vector<std::string> &cmd,
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 
-  Command(Redox *rdx, long id, const formated_string& cmd,
+  Command(Redox *rdx, const formated_string& cmd,
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 

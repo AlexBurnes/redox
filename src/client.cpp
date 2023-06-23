@@ -340,12 +340,14 @@ void Redox::runEventLoop() {
   // Run once more to disconnect
   ev_run(evloop_, EVRUN_NOWAIT);
 
+  //FIXME valgrind or similar tools will show if something is not freed
+  /*
   long created = commands_created_;
   long deleted = commands_deleted_;
   if (created != deleted) {
     logger_.error() << "All commands were not freed! " << deleted << "/"
                     << created;
-  }
+  }*/
 
   // Let go for block_until_stopped method
   setExited(true);
@@ -378,28 +380,30 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
     auto c = rdx->commands_to_free_.front();
     rdx->commands_to_free_.pop();
     c->freeReply_t();
-    rdx->deregisterCommand();
+    //rdx->deregisterCommand();
     delete c;
   }
 }
 
-long Redox::freeAllCommands() {
+void Redox::freeAllCommands() {
   lock_guard<mutex> lg(free_queue_guard_);
   lock_guard<mutex> lg2(queue_guard_);
 
-  long len = 0;
+  //long len = 0;
 
   while (!command_queue_.empty()) {
     auto c = command_queue_.front();
     command_queue_.pop();
     c->freeReply_t();
-    len++;
+    //len++;
     delete c;
   }
 
-  commands_deleted_ += len;
+  //commands_deleted_ += len;
 
-  return len;
+  //return len;
+
+  return;
 }
 
 // ----------------------------

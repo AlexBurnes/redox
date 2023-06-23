@@ -32,19 +32,19 @@ using namespace std;
 namespace redox {
 
 template <class ReplyT>
-Command<ReplyT>::Command(Redox *rdx, long id, const vector<string> &cmd,
+Command<ReplyT>::Command(Redox *rdx, const vector<string> &cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
                          double after, bool free_memory, log::Logger &logger)
-    : Command_t(), rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
+    : Command_t(), rdx_(rdx), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
       callback_(callback), last_error_(), logger_(logger) {
   timer_guard_.lock();
 }
 
 template <class ReplyT>
-Command<ReplyT>::Command(Redox *rdx, long id, const formated_string& cmd,
+Command<ReplyT>::Command(Redox *rdx, const formated_string& cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
                          double after, bool free_memory, log::Logger &logger)
-    : Command_t(), rdx_(rdx), id_(id), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
+    : Command_t(), rdx_(rdx), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
       callback_(callback), last_error_(), logger_(logger) {
   timer_guard_.lock();
 }

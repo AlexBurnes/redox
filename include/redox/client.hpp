@@ -257,9 +257,9 @@ public:
   // FIXME make it private again
   // Invoked by Command objects when they are completed. Removes them
   // from the command map.
-  void deregisterCommand() {
+  /*void deregisterCommand() {
     commands_deleted_ += 1;
-  }
+  }*/
 
   // Process the command with the given ID. Return true if the command had the
   // templated type, and false if it was not in the command map of that type.
@@ -323,7 +323,7 @@ private:
   static void freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revents);
 
   // Free all commands remaining in the command maps
-  long freeAllCommands();
+  void freeAllCommands();
 
   // Helper functions to get/set variables with synchronization.
   int getConnectState();
@@ -354,8 +354,9 @@ private:
   ev_async watcher_free_;    // For freeing commands
 
   // Track of Command objects allocated. Also provides unique Command IDs.
-  std::atomic_long commands_created_ = {0};
-  std::atomic_long commands_deleted_ = {0};
+  // FIXME IDs is no more required
+  // std::atomic_long commands_created_ = {0};
+  // std::atomic_long commands_deleted_ = {0};
 
   // Separate thread to have a non-blocking event loop
   std::thread event_loop_thread_;
@@ -402,7 +403,8 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
     }
   }
 
-  auto *c = new Command<ReplyT>(this, commands_created_.fetch_add(1), cmd,
+  //commands_created_++;
+  auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
 
   std::lock_guard<std::mutex> lg(queue_guard_);
@@ -426,7 +428,8 @@ Command<ReplyT> &Redox::createCommand(const formated_string& cmd,
     }
   }
 
-  auto *c = new Command<ReplyT>(this, commands_created_.fetch_add(1), cmd,
+  //commands_created_++;
+  auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
 
   std::lock_guard<std::mutex> lg(queue_guard_);
