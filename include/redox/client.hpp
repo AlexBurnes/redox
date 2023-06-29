@@ -133,14 +133,14 @@ public:
                const std::function<void(Command<ReplyT> &)> &callback = nullptr);
 
   template <class ReplyT>
-  void command(const formated_string& cmd,
+  void command(const format_command& cmd,
                const std::function<void(Command<ReplyT> &)> &callback = nullptr);
 
   /**
   * Asynchronously runs a command and ignores any errors or replies.
   */
   void command(const std::vector<std::string> &cmd);
-  void command(const formated_string& cmd);
+  void command(const format_command& cmd);
 
   /**
   * Synchronously runs a command, returning the Command object only once
@@ -149,14 +149,14 @@ public:
   */
 
   template <class ReplyT> Command<ReplyT> &commandSync(const std::vector<std::string> &cmd);
-  template <class ReplyT> Command<ReplyT> &commandSync(const formated_string &cmd);
+  template <class ReplyT> Command<ReplyT> &commandSync(const format_command &cmd);
 
   /**
   * Synchronously runs a command, returning only once a reply is received
   * or there's an error. Returns true on successful reply, false on error.
   */
   bool commandSync(const std::vector<std::string> &cmd);
-  bool commandSync(const formated_string &cmd);
+  bool commandSync(const format_command &cmd);
 
   /**
   * Creates an asynchronous command that is run every [repeat] seconds,
@@ -171,7 +171,7 @@ public:
                                double repeat, double after = 0.0);
 
   template <class ReplyT>
-  Command<ReplyT> &commandLoop(const formated_string &cmd,
+  Command<ReplyT> &commandLoop(const format_command &cmd,
                                const std::function<void(Command<ReplyT> &)> &callback,
                                double repeat, double after = 0.0);
 
@@ -187,7 +187,7 @@ public:
                       const std::function<void(Command<ReplyT> &)> &callback, double after);
 
   template <class ReplyT>
-  void commandDelayed(const formated_string &cmd,
+  void commandDelayed(const format_command &cmd,
                       const std::function<void(Command<ReplyT> &)> &callback, double after);
 
 
@@ -287,7 +287,7 @@ private:
                                  double repeat = 0.0, double after = 0.0, bool free_memory = true);
 
   template <class ReplyT>
-  Command<ReplyT> &createCommand(const formated_string& cmd,
+  Command<ReplyT> &createCommand(const format_command& cmd,
                                  const std::function<void(Command<ReplyT> &)> &callback = nullptr,
                                  double repeat = 0.0, double after = 0.0, bool free_memory = true);
 
@@ -418,7 +418,7 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
 }
 
 template <class ReplyT>
-Command<ReplyT> &Redox::createCommand(const formated_string& cmd,
+Command<ReplyT> &Redox::createCommand(const format_command& cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
   {
@@ -449,7 +449,7 @@ void Redox::command(const std::vector<std::string> &cmd,
 }
 
 template <class ReplyT>
-void Redox::command(const formated_string& cmd,
+void Redox::command(const format_command& cmd,
                     const std::function<void(Command<ReplyT> &)> &callback) {
   createCommand(cmd, callback);
 }
@@ -462,7 +462,7 @@ Command<ReplyT> &Redox::commandLoop(const std::vector<std::string> &cmd,
 }
 
 template <class ReplyT>
-Command<ReplyT> &Redox::commandLoop(const formated_string& cmd,
+Command<ReplyT> &Redox::commandLoop(const format_command& cmd,
                                     const std::function<void(Command<ReplyT> &)> &callback,
                                     double repeat, double after) {
   return createCommand(cmd, callback, repeat, after, false);
@@ -475,7 +475,7 @@ void Redox::commandDelayed(const std::vector<std::string> &cmd,
 }
 
 template <class ReplyT>
-void Redox::commandDelayed(const formated_string& cmd,
+void Redox::commandDelayed(const format_command& cmd,
                            const std::function<void(Command<ReplyT> &)> &callback, double after) {
   createCommand(cmd, callback, 0, after, true);
 }
@@ -486,7 +486,7 @@ template <class ReplyT> Command<ReplyT> &Redox::commandSync(const std::vector<st
   return c;
 }
 
-template <class ReplyT> Command<ReplyT> &Redox::commandSync(const formated_string& cmd) {
+template <class ReplyT> Command<ReplyT> &Redox::commandSync(const format_command& cmd) {
   auto &c = createCommand<ReplyT>(cmd, nullptr, 0, 0, false);
   c.wait();
   return c;
@@ -525,7 +525,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
     }
     return true;
   }
-  else if (auto cmd_ = std::any_cast<formated_string>(&c->cmd_)) {
+  else if (auto cmd_ = std::any_cast<format_command>(&c->cmd_)) {
     if (redisAsyncFormattedCommand(rdx->ctx_, commandCallback<ReplyT>, (void *)c,
                                    cmd_->target, cmd_->len) != REDIS_OK) {
         rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;

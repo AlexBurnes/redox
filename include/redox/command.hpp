@@ -120,7 +120,7 @@ private:
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 
-  Command(Redox *rdx, const formated_string& cmd,
+  Command(Redox *rdx, const format_command& cmd,
           const std::function<void(Command<ReplyT> &)> &callback, double repeat, double after,
           bool free_memory, log::Logger &logger);
 

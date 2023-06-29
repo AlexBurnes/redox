@@ -22,9 +22,8 @@
 
 namespace redox {
 
-
-    formated_string FormatCommand(const char *format, ...) {
-        formated_string fs{nullptr, 0, format};
+    format_command FormatCommand(const char *format, ...) {
+        format_command fs{nullptr, 0, format};
         va_list ap;
         va_start(ap,format);
         fs.len = redisvFormatCommand(&fs.target,format,ap);
@@ -32,27 +31,25 @@ namespace redox {
         return fs;
     }
 
-    formated_string::formated_string(char *target, int len, const char *format)
+    format_command::format_command(char *target, int len, const char *format)
         : target{nullptr}, len{0}, format{format}
         {
             cnt = new int*;
             *cnt = new int{0};
         }
-        formated_string::~formated_string() {
-            if (*cnt) {
+        format_command::~format_command() {
+            if (cnt) {
                 if (**cnt) {
                     (**cnt)--;
                     return;
                 }
+                free(target);
                 delete *cnt;
-                *cnt = nullptr;
                 delete cnt;
                 cnt = nullptr;
-                free(target);
-                target = nullptr;
             }
         }
-        formated_string::formated_string(const formated_string& r) {
+        format_command::format_command(const format_command& r) {
             target = r.target;
             len = r.len;
             format = r.format;

@@ -12,7 +12,7 @@ using namespace redox;
 
 double time_s() {
   unsigned long ms = chrono::system_clock::now().time_since_epoch() / chrono::microseconds(1);
-  return (double)ms / 1e6;
+  return (double)ms / 1e7;
 }
 
 int main(int argc, char* argv[]) {
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  double t = 5; // s
+  double t = 60; // s
 
   cout << "Sending \"" << "INCR simple_loop:count" << "\" synchronously for " << t << "s..." << endl;
 
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
   int count = 0;
 
   while(time_s() < t_end) {
-    Command<int>& c = rdx.commandSync<int>({"INCR", "simple_loop:count"});
+    Command<int>& c = rdx.commandSync<int>(redox::FormatCommand("INCR simple_loop:count"));
     if(!c.ok()) cerr << "Bad reply, code: " << c.status() << endl;
     c.free();
     count++;

@@ -431,7 +431,7 @@ vector<string> Redox::strToVec(const string &s, const char delimiter) {
 }
 
 void Redox::command(const vector<string> &cmd) { command<redisReply *>(cmd, nullptr); }
-void Redox::command(const formated_string& cmd) { command<redisReply *>(cmd, nullptr); }
+void Redox::command(const format_command& cmd) { command<redisReply *>(cmd, nullptr); }
 
 bool Redox::commandSync(const vector<string> &cmd) {
   auto &c = commandSync<redisReply *>(cmd);

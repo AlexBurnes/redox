@@ -25,28 +25,26 @@
 
 namespace redox {
 
-    struct formated_string {
+    struct format_command {
         char *target;
         int len;
         const char *format;
-        formated_string(char *target, int len, const char *format);
-        ~formated_string();
-        formated_string(const formated_string& r);
-        formated_string& operator=(const formated_string& r) = delete;
-        formated_string(formated_string&& r) = delete;
-        formated_string& operator=(formated_string&& r) = delete;
+        format_command(char *target, int len, const char *format);
+        ~format_command();
+        format_command(const format_command& r);
+        format_command& operator=(const format_command& r) = delete;
         private:
             int **cnt;
     };
 
-    inline const char* operator*(const formated_string &s) {return s.format;};
+    inline const char* operator*(const format_command &s) {return s.format;};
 
     /**
      * The FormatCommand formats input format string with arguments to redis protocol formated buffer
      *
     */
 
-    formated_string FormatCommand(const char *format, ...);
+    format_command FormatCommand(const char *format, ...);
 
 
 } // namespace redox

@@ -31,13 +31,13 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  vector<string> cmd_vec = {"INCR", "simple_loop:count"};
-  double freq = 10000; // Hz
+  auto const &cmd_fmt = redox::FormatCommand("INCR %s", "simple_loop:count");
+  double freq = 1000000; // Hz
   double dt = 1 / freq; // s
-  double t = 5; // s
+  double t = 60; // s
   int parallel = 100;
 
-  cout << "Sending \"" << rdx.vecToStr(cmd_vec) << "\" asynchronously every "
+  cout << "Sending \"" << *cmd_fmt << "\" asynchronously every "
        << dt << "s for " << t << "s..." << endl;
 
   double t0 = time_s();
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   vector<Command<int>*> commands;
   for(int i = 0; i < parallel; i++) {
     commands.push_back(&rdx.commandLoop<int>(
-        cmd_vec,
+        cmd_fmt,
         [&count, &rdx](Command<int>& c) {
           if (!c.ok()) {
             cerr << "Bad reply: " << c.status() << endl;

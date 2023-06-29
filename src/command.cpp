@@ -41,7 +41,7 @@ Command<ReplyT>::Command(Redox *rdx, const vector<string> &cmd,
 }
 
 template <class ReplyT>
-Command<ReplyT>::Command(Redox *rdx, const formated_string& cmd,
+Command<ReplyT>::Command(Redox *rdx, const format_command& cmd,
                          const function<void(Command<ReplyT> &)> &callback, double repeat,
                          double after, bool free_memory, log::Logger &logger)
     : Command_t(), rdx_(rdx), cmd_(cmd), repeat_(repeat), after_(after), free_memory_(free_memory),
@@ -51,7 +51,7 @@ Command<ReplyT>::Command(Redox *rdx, const formated_string& cmd,
 
 /*template <class ReplyT>
 Command<ReplyT>::~Command() {
-  if (auto cmd_fs = std::any_cast<formated_string>(&cmd_)) {
+  if (auto cmd_fs = std::any_cast<format_command>(&cmd_)) {
       //FIXME free resource at desctuctor
       ::free((void *)cmd_fs->target);
   }
@@ -156,7 +156,7 @@ template <class ReplyT> string Command<ReplyT>::cmd() const {
     if (auto cmd_vec_str = any_cast<vector<string>>(&cmd_)) {
         return rdx_->vecToStr(*cmd_vec_str);
     }
-    else if (auto cmd_fs = any_cast<formated_string>(&cmd_)) {
+    else if (auto cmd_fs = any_cast<format_command>(&cmd_)) {
         return (*cmd_fs).format;
     }
     else return "";
