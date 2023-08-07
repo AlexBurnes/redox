@@ -71,7 +71,7 @@ template <class ReplyT> void Command<ReplyT>::processReply(redisReply *r) {
     Redox::disconnectedCallback(rdx_->ctx_, REDIS_ERR);
 
   } else {
-    lock_guard<mutex> lg(reply_guard_);
+    lock_guard<mutex> lg_(reply_guard_);
     parseReplyObject();
   }
 
@@ -106,7 +106,7 @@ template <class ReplyT> void Command<ReplyT>::processReply(redisReply *r) {
 // access to private members of Redox
 template <class ReplyT> void Command<ReplyT>::free() {
 
-  lock_guard<mutex> lg(rdx_->free_queue_guard_);
+  lock_guard<mutex> lg_(rdx_->free_queue_guard_);
   rdx_->commands_to_free_.push(this);
   ev_async_send(rdx_->evloop_, &rdx_->watcher_free_);
 }
@@ -115,7 +115,7 @@ template <class ReplyT> void Command<ReplyT>::freeReply_t() {
   freeReply();
   // Stop the libev timer if this is a repeating command
   if ((repeat_ != 0) || (after_ != 0)) {
-    lock_guard<mutex> lg(timer_guard_);
+    lock_guard<mutex> lg_(timer_guard_);
     ev_timer_stop(rdx_->evloop_, &timer_);
   }
 
@@ -137,7 +137,7 @@ template <class ReplyT> void Command<ReplyT>::freeReply() {
 * modified.
 */
 template <class ReplyT> ReplyT Command<ReplyT>::reply() {
-  lock_guard<mutex> lg(reply_guard_);
+  lock_guard<mutex> lg_(reply_guard_);
   if (!ok()) {
     logger_.warning() << cmd() << ": Accessing reply value while status != OK.";
   }

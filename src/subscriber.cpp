@@ -55,15 +55,15 @@ void Subscriber::stop() {
     punsubscribe(topic);
 
   {
-    unique_lock<mutex> ul(subscribed_topics_guard_);
-    cv_unsub_.wait(ul, [this] {
+    unique_lock<mutex> ul_(subscribed_topics_guard_);
+    cv_unsub_.wait(ul_, [this] {
       return (subscribed_topics_.size() == 0);
     });
   }
 
   {
-    unique_lock<mutex> ul(psubscribed_topics_guard_);
-    cv_punsub_.wait(ul, [this] {
+    unique_lock<mutex> ul_(psubscribed_topics_guard_);
+    cv_punsub_.wait(ul_, [this] {
       return (psubscribed_topics_.size() == 0);
     });
   }
@@ -120,25 +120,25 @@ void Subscriber::subscribeBase(const string cmd_name, const string topic,
 
 
           if (!strncmp(reply->element[0]->str, "sub", 3)) {
-            lock_guard<mutex> lg(subscribed_topics_guard_);
+            lock_guard<mutex> lg_(subscribed_topics_guard_);
             subscribed_topics_.insert(topic);
             num_pending_subs_--;
             if (sub_callback)
               sub_callback(topic);
           } else if (!strncmp(reply->element[0]->str, "psub", 4)) {
-            lock_guard<mutex> lg(psubscribed_topics_guard_);
+            lock_guard<mutex> lg_(psubscribed_topics_guard_);
             psubscribed_topics_.insert(topic);
             num_pending_subs_--;
             if (sub_callback)
               sub_callback(topic);
           } else if (!strncmp(reply->element[0]->str, "uns", 3)) {
-            lock_guard<mutex> lg(subscribed_topics_guard_);
+            lock_guard<mutex> lg_(subscribed_topics_guard_);
             subscribed_topics_.erase(topic);
             if (unsub_callback)
               unsub_callback(topic);
             cv_unsub_.notify_all();
           } else if (!strncmp(reply->element[0]->str, "puns", 4)) {
-            lock_guard<mutex> lg(psubscribed_topics_guard_);
+            lock_guard<mutex> lg_(psubscribed_topics_guard_);
             psubscribed_topics_.erase(topic);
             if (unsub_callback)
               unsub_callback(topic);
@@ -181,7 +181,7 @@ void Subscriber::subscribe(const string topic,
                            function<void(const string &)> sub_callback,
                            function<void(const string &)> unsub_callback,
                            function<void(const string &, int)> err_callback) {
-  lock_guard<mutex> lg(subscribed_topics_guard_);
+  lock_guard<mutex> lg_(subscribed_topics_guard_);
   if (subscribed_topics_.find(topic) != subscribed_topics_.end()) {
     logger_.warning() << "Already subscribed to " << topic << "!";
     return;
@@ -194,7 +194,7 @@ void Subscriber::psubscribe(const string topic,
                             function<void(const string &)> sub_callback,
                             function<void(const string &)> unsub_callback,
                             function<void(const string &, int)> err_callback) {
-  lock_guard<mutex> lg(psubscribed_topics_guard_);
+  lock_guard<mutex> lg_(psubscribed_topics_guard_);
   if (psubscribed_topics_.find(topic) != psubscribed_topics_.end()) {
     logger_.warning() << "Already psubscribed to " << topic << "!";
     return;
@@ -214,7 +214,7 @@ void Subscriber::unsubscribeBase(const string cmd_name, const string topic,
 }
 
 void Subscriber::unsubscribe(const string topic, function<void(const string &, int)> err_callback) {
-  lock_guard<mutex> lg(subscribed_topics_guard_);
+  lock_guard<mutex> lg_(subscribed_topics_guard_);
   if (subscribed_topics_.find(topic) == subscribed_topics_.end()) {
     logger_.warning() << "Cannot unsubscribe from " << topic << ", not subscribed!";
     return;
@@ -224,7 +224,7 @@ void Subscriber::unsubscribe(const string topic, function<void(const string &, i
 
 void Subscriber::punsubscribe(const string topic,
                               function<void(const string &, int)> err_callback) {
-  lock_guard<mutex> lg(psubscribed_topics_guard_);
+  lock_guard<mutex> lg_(psubscribed_topics_guard_);
   if (psubscribed_topics_.find(topic) == psubscribed_topics_.end()) {
     logger_.warning() << "Cannot punsubscribe from " << topic << ", not psubscribed!";
     return;

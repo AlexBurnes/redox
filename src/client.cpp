@@ -75,9 +75,9 @@ bool Redox::connect(const string &host, const int port,
   // Block until connected and running the event loop, or until
   // a connection error happens and the event loop exits
   {
-    unique_lock<mutex> ul(running_lock_);
-    running_waiter_.wait(ul, [this] {
-      lock_guard<mutex> lg(connect_lock_);
+    unique_lock<mutex> ul_(running_lock_);
+    running_waiter_.wait(ul_, [this] {
+      lock_guard<mutex> lg_(connect_lock_);
       return running_ || connect_state_ == CONNECT_ERROR;
     });
   }
@@ -105,9 +105,9 @@ bool Redox::connectUnix(const string &path, function<void(int)> connection_callb
   // Block until connected and running the event loop, or until
   // a connection error happens and the event loop exits
   {
-    unique_lock<mutex> ul(running_lock_);
-    running_waiter_.wait(ul, [this] {
-      lock_guard<mutex> lg(connect_lock_);
+    unique_lock<mutex> ul_(running_lock_);
+    running_waiter_.wait(ul_, [this] {
+      lock_guard<mutex> lg_(connect_lock_);
       return running_ || connect_state_ == CONNECT_ERROR;
     });
   }
@@ -128,8 +128,8 @@ void Redox::stop() {
 }
 
 void Redox::wait() {
-  unique_lock<mutex> ul(exit_lock_);
-  exit_waiter_.wait(ul, [this] { return exited_; });
+  unique_lock<mutex> ul_(exit_lock_);
+  exit_waiter_.wait(ul_, [this] { return exited_; });
 }
 
 Redox::~Redox() {
@@ -255,24 +255,24 @@ void Redox::setConnectState(int connect_state) {
 }
 
 int Redox::getRunning() {
-  lock_guard<mutex> lg(running_lock_);
+  lock_guard<mutex> lg_(running_lock_);
   return running_;
 }
 void Redox::setRunning(bool running) {
   {
-    lock_guard<mutex> lg(running_lock_);
+    lock_guard<mutex> lg_(running_lock_);
     running_ = running;
   }
   running_waiter_.notify_one();
 }
 
 int Redox::getExited() {
-  lock_guard<mutex> lg(exit_lock_);
+  lock_guard<mutex> lg_(exit_lock_);
   return exited_;
 }
 void Redox::setExited(bool exited) {
   {
-    lock_guard<mutex> lg(exit_lock_);
+    lock_guard<mutex> lg_(exit_lock_);
     exited_ = exited;
   }
   exit_waiter_.notify_one();
@@ -286,8 +286,8 @@ void Redox::runEventLoop() {
 
   // Block until connected to Redis, or error
   {
-    unique_lock<mutex> ul(connect_lock_);
-    connect_waiter_.wait(ul, [this] { return connect_state_ != NOT_YET_CONNECTED; });
+    unique_lock<mutex> ul_(connect_lock_);
+    connect_waiter_.wait(ul_, [this] { return connect_state_ != NOT_YET_CONNECTED; });
 
     // Handle connection error
     if (connect_state_ != CONNECTED) {
@@ -360,7 +360,7 @@ void Redox::processQueuedCommands(struct ev_loop *loop, ev_async *async, int rev
 
   Redox *rdx = (Redox *)ev_userdata(loop);
 
-  lock_guard<mutex> lg(rdx->queue_guard_);
+  lock_guard<mutex> lg_(rdx->queue_guard_);
 
   while (!rdx->command_queue_.empty()) {
 
@@ -374,7 +374,7 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
 
   Redox *rdx = (Redox *)ev_userdata(loop);
 
-  lock_guard<mutex> lg(rdx->free_queue_guard_);
+  lock_guard<mutex> lg_(rdx->free_queue_guard_);
 
   while (!rdx->commands_to_free_.empty()) {
     auto c = rdx->commands_to_free_.front();
@@ -386,8 +386,8 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
 }
 
 void Redox::freeAllCommands() {
-  lock_guard<mutex> lg(free_queue_guard_);
-  lock_guard<mutex> lg2(queue_guard_);
+  lock_guard<mutex> lg_(free_queue_guard_);
+  lock_guard<mutex> lg2_(queue_guard_);
 
   //long len = 0;
 
