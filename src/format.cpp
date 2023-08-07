@@ -22,6 +22,12 @@
 
 namespace redox {
 
+    format_command FormatCommand(const char *format, va_list ap) {
+        format_command fs{nullptr, 0, format};
+        fs.len = redisvFormatCommand(&fs.target,format,ap);
+        return fs;
+    }
+
     format_command FormatCommand(const char *format, ...) {
         format_command fs{nullptr, 0, format};
         va_list ap;

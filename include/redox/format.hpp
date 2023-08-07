@@ -44,6 +44,7 @@ namespace redox {
      *
     */
 
+    format_command FormatCommand(const char *format, va_list ap);
     format_command FormatCommand(const char *format, ...);
 
 
