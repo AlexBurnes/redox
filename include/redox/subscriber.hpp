@@ -119,7 +119,7 @@ public:
   * Return the topics that are subscribed() to.
   */
   std::set<std::string> subscribedTopics() {
-    std::lock_guard<std::mutex> lg(subscribed_topics_guard_);
+    std::lock_guard<std::mutex> lg_(subscribed_topics_guard_);
     return subscribed_topics_;
   }
 
@@ -127,7 +127,7 @@ public:
   * Return the topic patterns that are psubscribed() to.
   */
   std::set<std::string> psubscribedTopics() {
-    std::lock_guard<std::mutex> lg(psubscribed_topics_guard_);
+    std::lock_guard<std::mutex> lg_(psubscribed_topics_guard_);
     return psubscribed_topics_;
   }
 
