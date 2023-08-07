@@ -407,7 +407,7 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
 
-  std::lock_guard<std::mutex> lg(queue_guard_);
+  std::lock_guard<std::mutex> lg_(queue_guard_);
 
   command_queue_.push(c);
 
@@ -422,7 +422,7 @@ Command<ReplyT> &Redox::createCommand(const format_command& cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
   {
-    std::unique_lock<std::mutex> ul(running_lock_);
+    std::unique_lock<std::mutex> ul_(running_lock_);
     if (!running_) {
       throw std::runtime_error("[ERROR] Need to connect Redox before running commands!");
     }
@@ -432,7 +432,7 @@ Command<ReplyT> &Redox::createCommand(const format_command& cmd,
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
 
-  std::lock_guard<std::mutex> lg(queue_guard_);
+  std::lock_guard<std::mutex> lg_(queue_guard_);
 
   command_queue_.push(c);
 

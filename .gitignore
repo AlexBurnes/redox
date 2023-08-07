@@ -29,6 +29,7 @@
 
 # CMake
 build/
+.build/
 
 # IntelliJ
 .idea/
@@ -39,3 +40,10 @@ TODO.md
 # Eclipse
 .cproject
 .project
+
+# Geany
+*.geany
+
+# google tests
+gtest/
+googletest/

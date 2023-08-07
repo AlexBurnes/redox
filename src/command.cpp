@@ -49,14 +49,6 @@ Command<ReplyT>::Command(Redox *rdx, const format_command& cmd,
   timer_guard_.lock();
 }
 
-/*template <class ReplyT>
-Command<ReplyT>::~Command() {
-  if (auto cmd_fs = std::any_cast<format_command>(&cmd_)) {
-      //FIXME free resource at desctuctor
-      ::free((void *)cmd_fs->target);
-  }
-}*/
-
 template <class ReplyT> void Command<ReplyT>::wait() {
   unique_lock<mutex> lk(waiter_lock_);
   waiter_.wait(lk, [this]() { return waiting_done_.load(); });
