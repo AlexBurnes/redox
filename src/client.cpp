@@ -23,9 +23,9 @@
 
 using namespace std;
 
-void *hi_malloc(unsigned long size){
-    return malloc(size);
-}
+//void *hi_malloc(unsigned long size){
+//   return malloc(size);
+//}
 
 namespace {
 

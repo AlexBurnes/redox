@@ -1,0 +1,16 @@
+{
+    "name": "lur",
+    "dependencies": [
+        {
+            "name": "hiredis"
+        },
+        {
+            "name": "vcpkg-cmake",
+            "host": true
+        },
+        {
+            "name": "vcpkg-cmake-config",
+            "host": true
+        }
+    ]
+}

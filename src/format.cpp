@@ -19,6 +19,7 @@
 */
 
 #include "format.hpp"
+#include <stdlib.h>
 
 namespace redox {
 
