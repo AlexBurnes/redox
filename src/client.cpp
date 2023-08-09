@@ -201,7 +201,7 @@ bool Redox::initHiredis() {
   ctx_->data = (void *)this; // Back-reference
 
   if (ctx_->err) {
-    logger_.fatal() << "Could not create a hiredis context: " << ctx_->errstr;
+    logger_.fatal() << "Could not create a hiredis context: (" << ctx_->err << ") "<< ctx_->errstr;
     setConnectState(INIT_ERROR);
     return false;
   }
