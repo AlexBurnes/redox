@@ -198,10 +198,16 @@ bool Redox::initEv() {
 
 bool Redox::initHiredis() {
 
+  if (ctx_ == nullptr) {
+    logger_.fatal() << "Could not create a hiredis context";
+    setConnectState(INIT_ERROR);
+    return false;
+  }
+
   ctx_->data = (void *)this; // Back-reference
 
   if (ctx_->err) {
-    logger_.fatal() << "Could not create a hiredis context: (" << ctx_->err << ") "<< ctx_->errstr;
+    logger_.fatal() << "Context creation error: (" << ctx_->err << ") '" << ctx_->errstr << "'";
     setConnectState(INIT_ERROR);
     return false;
   }
