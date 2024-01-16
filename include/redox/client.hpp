@@ -396,16 +396,23 @@ template <class ReplyT>
 Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
-  {
-    std::unique_lock<std::mutex> ul(running_lock_);
-    if (!running_) {
-      throw std::runtime_error("[ERROR] Need to connect Redox before running commands!");
-    }
-  }
 
   //commands_created_++;
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
+
+  {
+    std::unique_lock<std::mutex> ul(running_lock_);
+
+
+    if (!running_) {
+        //FIXME create context with error and call it, and return context with error!
+        c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+        c->invoke();
+        return *c;
+        //throw std::runtime_error("[ERROR] Need to connect Redox before running commands!");
+    }
+  }
 
   std::lock_guard<std::mutex> lg_(queue_guard_);
 
@@ -421,16 +428,20 @@ template <class ReplyT>
 Command<ReplyT> &Redox::createCommand(const format_command& cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
-  {
-    std::unique_lock<std::mutex> ul_(running_lock_);
-    if (!running_) {
-      throw std::runtime_error("[ERROR] Need to connect Redox before running commands!");
-    }
-  }
 
   //commands_created_++;
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
+  {
+    std::unique_lock<std::mutex> ul_(running_lock_);
+    if (!running_) {
+        c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+        c->invoke();
+        return *c;
+        //throw std::runtime_error("[ERROR] Need to connect Redox before running commands!");
+    }
+  }
+
 
   std::lock_guard<std::mutex> lg_(queue_guard_);
 
