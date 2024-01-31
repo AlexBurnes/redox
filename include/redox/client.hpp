@@ -414,6 +414,8 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
     }
   }
 
+  c->reply_status_ = Command<ReplyT>::NO_REPLY;
+
   std::lock_guard<std::mutex> lg_(queue_guard_);
 
   command_queue_.push(c);
@@ -442,6 +444,7 @@ Command<ReplyT> &Redox::createCommand(const format_command& cmd,
     }
   }
 
+  c->reply_status_ = Command<ReplyT>::NO_REPLY;
 
   std::lock_guard<std::mutex> lg_(queue_guard_);
 
