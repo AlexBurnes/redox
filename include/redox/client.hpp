@@ -493,13 +493,13 @@ void Redox::commandDelayed(const format_command& cmd,
 
 template <class ReplyT> Command<ReplyT> &Redox::commandSync(const std::vector<std::string> &cmd) {
   auto &c = createCommand<ReplyT>(cmd, nullptr, 0, 0, false);
-  c.wait();
+  if (c.ok() == NO_REPLY) c.wait();
   return c;
 }
 
 template <class ReplyT> Command<ReplyT> &Redox::commandSync(const format_command& cmd) {
   auto &c = createCommand<ReplyT>(cmd, nullptr, 0, 0, false);
-  c.wait();
+  if (c.ok() == NO_REPLY) c.wait();
   return c;
 }
 
