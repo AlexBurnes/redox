@@ -520,6 +520,8 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
 
   Redox *rdx = c->rdx_;
 
+  c->pending_++;
+
   if (!rdx->running_) {
     rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
     c->reply_status_ = Command<ReplyT>::SEND_ERROR;
@@ -527,7 +529,6 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
     return false;
   }
 
-  c->pending_++;
 
   // Construct a char** from the vector
   std::vector<const char *> argv;
