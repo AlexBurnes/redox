@@ -520,7 +520,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
 
   Redox *rdx = c->rdx_;
 
-  if (!rdx->getRunning()) {
+  if (!rdx->running_) {
     rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
     c->reply_status_ = Command<ReplyT>::SEND_ERROR;
     c->invoke();
