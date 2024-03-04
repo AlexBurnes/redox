@@ -519,6 +519,14 @@ void Redox::commandCallback(redisAsyncContext *ctx, void *r, void *privdata) {
 template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
 
   Redox *rdx = c->rdx_;
+
+  if (!rdx->getRunning()) {
+    rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+    c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+    c->invoke();
+    return false;
+  }
+
   c->pending_++;
 
   // Construct a char** from the vector
