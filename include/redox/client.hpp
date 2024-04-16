@@ -523,9 +523,9 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
   c->pending_++;
 
   if (rdx->to_exit_) {
-    rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+    rdx->logger_.error() << "#1 Could not send \"" << c->cmd() << "\": redox exiting";
     c->reply_status_ = Command<ReplyT>::SEND_ERROR;
-    c->invoke();
+    c->processReply(nullptr);
     return false;
   }
 
@@ -541,7 +541,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
        [](const std::string &s) { return s.size(); });
     if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c, argv.size(),
                               &argv[0], &argvlen[0]) != REDIS_OK) {
-        rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+        rdx->logger_.error() << "#2 Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
         c->invoke();
         return false;
@@ -551,13 +551,13 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
   else if (auto cmd_ = std::any_cast<format_command>(&c->cmd_)) {
     if (redisAsyncFormattedCommand(rdx->ctx_, commandCallback<ReplyT>, (void *)c,
                                    cmd_->target, cmd_->len) != REDIS_OK) {
-        rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+        rdx->logger_.error() << "#3 Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
         c->invoke();
         return false;
     }
   }
-  // error no supprted type
+  // error no supported type
   return false;
 }
 

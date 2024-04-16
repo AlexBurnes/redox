@@ -15,7 +15,7 @@ redox::Redox rdx;
 
 int main(int argc, char* argv[]) {
 
-  if(!rdx.connect("localhost", 6379)) return 1;
+  if(!rdx.connect("localhost", 6380)) return 1;
 
   thread setter([]() {
     for(int i = 0; i < 5000; i++) {
