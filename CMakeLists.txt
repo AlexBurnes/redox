@@ -136,6 +136,9 @@ if (examples)
   add_executable(basic examples/basic.cpp)
   target_link_libraries(basic redox)
 
+  add_executable(basic_async examples/basic_async.cpp)
+  target_link_libraries(basic_async redox)
+
   add_executable(basic_threaded examples/basic_threaded.cpp)
   target_link_libraries(basic_threaded redox)
 

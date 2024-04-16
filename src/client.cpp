@@ -78,7 +78,7 @@ bool Redox::connect(const string &host, const int port,
     unique_lock<mutex> ul_(running_lock_);
     running_waiter_.wait(ul_, [this] {
       lock_guard<mutex> lg_(connect_lock_);
-      return running_ || connect_state_ == CONNECT_ERROR;
+      return running_ || connect_state_ == CONNECT_ERROR || connect_state_ == DISCONNECT_ERROR;
     });
   }
 
@@ -97,6 +97,8 @@ bool Redox::connectUnix(const string &path, function<void(int)> connection_callb
   // Connect over unix sockets
   ctx_ = redisAsyncConnectUnix(path.c_str());
 
+  // вот тут есть проблема логическая идет иницилизация, но блок ожидания еще не готов и callback может уже прилететь,
+  // а обработка еще стоит
   if (!initHiredis())
     return false;
 
@@ -108,7 +110,7 @@ bool Redox::connectUnix(const string &path, function<void(int)> connection_callb
     unique_lock<mutex> ul_(running_lock_);
     running_waiter_.wait(ul_, [this] {
       lock_guard<mutex> lg_(connect_lock_);
-      return running_ || connect_state_ == CONNECT_ERROR;
+      return running_ || connect_state_ == CONNECT_ERROR || connect_state_ == DISCONNECT_ERROR;
     });
   }
 
@@ -297,7 +299,7 @@ void Redox::runEventLoop() {
 
     // Handle connection error
     if (connect_state_ != CONNECTED) {
-      logger_.warning() << "Did not connect, event loop exiting.";
+      logger_.warning() << "Did not connect, event loop exiting. Connect state " << to_string(connect_state_);
       setExited(true);
       setRunning(false);
       return;
@@ -347,13 +349,13 @@ void Redox::runEventLoop() {
   ev_run(evloop_, EVRUN_NOWAIT);
 
   //FIXME valgrind or similar tools will show if something is not freed
-  /*
+
   long created = commands_created_;
   long deleted = commands_deleted_;
   if (created != deleted) {
     logger_.error() << "All commands were not freed! " << deleted << "/"
                     << created;
-  }*/
+  }
 
   // Let go for block_until_stopped method
   setExited(true);
@@ -386,7 +388,7 @@ void Redox::freeQueuedCommands(struct ev_loop *loop, ev_async *async, int revent
     auto c = rdx->commands_to_free_.front();
     rdx->commands_to_free_.pop();
     c->freeReply_t();
-    //rdx->deregisterCommand();
+    rdx->deregisterCommand();
     delete c;
   }
 }
@@ -395,17 +397,18 @@ void Redox::freeAllCommands() {
   lock_guard<mutex> lg_(free_queue_guard_);
   lock_guard<mutex> lg2_(queue_guard_);
 
-  //long len = 0;
+  long len = 0;
 
+  //FIXME how about callbacks for command in queue?
   while (!command_queue_.empty()) {
     auto c = command_queue_.front();
     command_queue_.pop();
     c->freeReply_t();
-    //len++;
+    len++;
     delete c;
   }
 
-  //commands_deleted_ += len;
+  commands_deleted_ += len;
 
   //return len;
 

@@ -257,9 +257,9 @@ public:
   // FIXME make it private again
   // Invoked by Command objects when they are completed. Removes them
   // from the command map.
-  /*void deregisterCommand() {
+  void deregisterCommand() {
     commands_deleted_ += 1;
-  }*/
+  }
 
   // Process the command with the given ID. Return true if the command had the
   // templated type, and false if it was not in the command map of that type.
@@ -355,8 +355,8 @@ private:
 
   // Track of Command objects allocated. Also provides unique Command IDs.
   // FIXME IDs is no more required
-  // std::atomic_long commands_created_ = {0};
-  // std::atomic_long commands_deleted_ = {0};
+  std::atomic_long commands_created_ = {0};
+  std::atomic_long commands_deleted_ = {0};
 
   // Separate thread to have a non-blocking event loop
   std::thread event_loop_thread_;
@@ -397,7 +397,7 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
 
-  //commands_created_++;
+  commands_created_++;
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
 
@@ -431,7 +431,7 @@ Command<ReplyT> &Redox::createCommand(const format_command& cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
 
-  //commands_created_++;
+  commands_created_++;
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
   {
