@@ -110,7 +110,7 @@ bool Redox::connectUnix(const string &path, function<void(int)> connection_callb
     unique_lock<mutex> ul_(running_lock_);
     running_waiter_.wait(ul_, [this] {
       lock_guard<mutex> lg_(connect_lock_);
-      return running_ || connect_state_ == CONNECT_ERROR || connect_state_ == DISCONNECT_ERROR;
+      return running_ || to_exit_ || connect_state_ == CONNECT_ERROR || connect_state_ == DISCONNECT_ERROR;
     });
   }
 

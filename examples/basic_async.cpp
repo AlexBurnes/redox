@@ -44,39 +44,48 @@ int main(int argc, char* argv[]) {
     connected = false;
     done = false;
 
+
+    long int success = 0;
     long int tries = 0;
 
-    while(!done) {
-        ++tries;
-        Redox rdx;
-        cout << "connecting try " << to_string(tries) << std::endl;
-        if(!rdx.connect("localhost", 6380, connect_callback)) {
-            cerr << "main: failed connect" << endl;
-            continue;
+    while (true) {
+        done = false;
+        tries = 0;
+        while(!done) {
+            ++tries;
+            Redox rdx;
+            cout << "connecting try " << to_string(tries) << std::endl;
+            if(!rdx.connect("localhost", 6380, connect_callback)) {
+                cerr << "main: failed connect" << endl;
+                continue;
+            }
+
+            if (!connected) {
+                cerr << "main: not connected" << endl;
+                continue;
+            }
+
+            cout << "connected, del occupation" << std::endl;
+
+            rdx.command({"AUTH","123456"});
+
+            if (!rdx.del("occupation")) {
+                cerr << "Failed del occupation" << std::endl;
+                continue;
+            }
+
+            cout << "set occupation" << std::endl;
+
+            if(!rdx.set("occupation", "carpenter")) {
+                cerr << "Failed to set key!" << endl;
+                continue;
+            }
+
+            cout << "key = \"occupation\", value = \"" << rdx.get("occupation") << "\"" << endl;
+            done = true;
         }
-
-        if (!connected) {
-            cerr << "main: not connected" << endl;
-            continue;
-        }
-
-        cout << "connected, del occupation" << std::endl;
-
-        if (!rdx.del("occupation")) {
-            cerr << "Failed del occupation" << std::endl;
-            continue;
-        }
-
-        cout << "set occupation" << std::endl;
-
-        if(!rdx.set("occupation", "carpenter")) {
-            cerr << "Failed to set key!" << endl;
-            continue;
-        }
-
-        cout << "key = \"occupation\", value = \"" << rdx.get("occupation") << "\"" << endl;
-        done = true;
-
+        ++success;
+        cout << "successed " << to_string(success) << endl;
     }
 
     return 0;
