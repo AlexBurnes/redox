@@ -30,6 +30,7 @@
 # CMake
 build/
 .build/
+.install/ 
 
 # IntelliJ
 .idea/
@@ -47,3 +48,6 @@ TODO.md
 # google tests
 gtest/
 googletest/
+
+# connan
+CMakeUserPresets.json
