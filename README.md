@@ -288,6 +288,11 @@ Install into system directories (optional):
 
     sudo make install
 
+#### Build using conan
+
+    conan install . -of=.build --build=missing
+    cmake -H. -B.build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
+
 #### Build examples and test suite
 Enable examples using ccmake or the following:
 
