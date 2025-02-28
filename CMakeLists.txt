@@ -91,7 +91,7 @@ include_directories(${INC_REDOX_DIR}/redox)
 if (lib)
 
   add_library(redox SHARED ${SRC_REDOX_ALL} ${INC_REDOX_CORE})
-  target_link_libraries(redox ${REDOX_LIB_DEPS})
+  target_link_libraries(redox ${REDOX_LIB_DEPS} libev::libev hiredis::hiredis)
 
   set_target_properties(redox
     PROPERTIES VERSION ${REDOX_VERSION_STRING}
@@ -102,7 +102,7 @@ endif()
 if (static_lib)
 
   add_library(redox_static STATIC ${SRC_REDOX_ALL})
-  target_link_libraries(redox_static ${REDOX_LIB_DEPS})
+  target_link_libraries(redox_static ${REDOX_LIB_DEPS} libev::libev hiredis::hiredis)
 
   set_target_properties(redox_static
     PROPERTIES VERSION ${REDOX_VERSION_STRING}
