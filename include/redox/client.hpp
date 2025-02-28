@@ -534,6 +534,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
                               &argv[0], &argvlen[0]) != REDIS_OK) {
         rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+        c->last_error_ = rdx->ctx_->errstr;
         c->invoke();
         return false;
     }
@@ -544,6 +545,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
                                    cmd_->target, cmd_->len) != REDIS_OK) {
         rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+        c->last_error_ = rdx->ctx_->errstr;
         c->invoke();
         return false;
     }
