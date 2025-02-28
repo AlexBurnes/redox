@@ -13,12 +13,22 @@ using redox::Subscriber;
 int main(int argc, char* argv[]) {
 
   Redox rdx;
-  if(!rdx.connect("localhost", 6379)) return 1;
+  cout << "connecting" << std::endl;
+  if(!rdx.connect("localhost", 6380)) return 1;
 
-  rdx.del("occupation");
+  cout << "connected, del occupation" << std::endl;
 
-  if(!rdx.set("occupation", "carpenter")) // Set a key, check if succeeded
+  if (!rdx.del("occupation")) {
+    cerr << "Failed del occupation" << std::endl;
+    //return 1;
+  }
+
+  cout << "set occupation" << std::endl;
+
+  if(!rdx.set("occupation", "carpenter")) {
     cerr << "Failed to set key!" << endl;
+    //return 1;
+  }
 
   cout << "key = \"occupation\", value = \"" << rdx.get("occupation") << "\"" << endl;
 

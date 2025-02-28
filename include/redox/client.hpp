@@ -257,9 +257,9 @@ public:
   // FIXME make it private again
   // Invoked by Command objects when they are completed. Removes them
   // from the command map.
-  /*void deregisterCommand() {
+  void deregisterCommand() {
     commands_deleted_ += 1;
-  }*/
+  }
 
   // Process the command with the given ID. Return true if the command had the
   // templated type, and false if it was not in the command map of that type.
@@ -355,8 +355,8 @@ private:
 
   // Track of Command objects allocated. Also provides unique Command IDs.
   // FIXME IDs is no more required
-  // std::atomic_long commands_created_ = {0};
-  // std::atomic_long commands_deleted_ = {0};
+  std::atomic_long commands_created_ = {0};
+  std::atomic_long commands_deleted_ = {0};
 
   // Separate thread to have a non-blocking event loop
   std::thread event_loop_thread_;
@@ -397,7 +397,7 @@ Command<ReplyT> &Redox::createCommand(const std::vector<std::string> &cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
 
-  //commands_created_++;
+  commands_created_++;
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
 
@@ -431,7 +431,7 @@ Command<ReplyT> &Redox::createCommand(const format_command& cmd,
                                       const std::function<void(Command<ReplyT> &)> &callback,
                                       double repeat, double after, bool free_memory) {
 
-  //commands_created_++;
+  commands_created_++;
   auto *c = new Command<ReplyT>(this, cmd,
                                 callback, repeat, after, free_memory, logger_);
   {
@@ -519,7 +519,16 @@ void Redox::commandCallback(redisAsyncContext *ctx, void *r, void *privdata) {
 template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
 
   Redox *rdx = c->rdx_;
+
   c->pending_++;
+
+  if (rdx->to_exit_) {
+    rdx->logger_.error() << "#1 Could not send \"" << c->cmd() << "\": redox exiting";
+    c->reply_status_ = Command<ReplyT>::SEND_ERROR;
+    c->processReply(nullptr);
+    return false;
+  }
+
 
   // Construct a char** from the vector
   std::vector<const char *> argv;
@@ -532,7 +541,7 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
        [](const std::string &s) { return s.size(); });
     if (redisAsyncCommandArgv(rdx->ctx_, commandCallback<ReplyT>, (void *)c, argv.size(),
                               &argv[0], &argvlen[0]) != REDIS_OK) {
-        rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+        rdx->logger_.error() << "#2 Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
         c->last_error_ = rdx->ctx_->errstr;
         c->invoke();
@@ -543,14 +552,14 @@ template <class ReplyT> bool Redox::submitToServer(Command<ReplyT> *c) {
   else if (auto cmd_ = std::any_cast<format_command>(&c->cmd_)) {
     if (redisAsyncFormattedCommand(rdx->ctx_, commandCallback<ReplyT>, (void *)c,
                                    cmd_->target, cmd_->len) != REDIS_OK) {
-        rdx->logger_.error() << "Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
+        rdx->logger_.error() << "#3 Could not send \"" << c->cmd() << "\": " << rdx->ctx_->errstr;
         c->reply_status_ = Command<ReplyT>::SEND_ERROR;
         c->last_error_ = rdx->ctx_->errstr;
         c->invoke();
         return false;
     }
   }
-  // error no supprted type
+  // error no supported type
   return false;
 }
 
