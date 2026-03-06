@@ -131,6 +131,9 @@ public:
     return psubscribed_topics_;
   }
 
+  // Underlying Redis client
+  Redox rdx_;
+
 private:
   // Base for subscribe and psubscribe
   void subscribeBase(const std::string cmd_name, const std::string topic,
@@ -143,8 +146,6 @@ private:
   void unsubscribeBase(const std::string cmd_name, const std::string topic,
                        std::function<void(const std::string &, int)> err_callback = nullptr);
 
-  // Underlying Redis client
-  Redox rdx_;
 
   // Keep track of topics because we can only unsubscribe
   // from subscribed topics and punsubscribe from
